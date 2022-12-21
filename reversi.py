@@ -6,10 +6,9 @@ import numpy as np
 BOARD_SIZE = 8
 assert BOARD_SIZE % 2 == 0, "Board size must be an even number"
 
-WHITE = 0
-BLACK = 1
-
-PLAYER_REPRES = [1, 2] # 0 is empty
+EMPTY = 0
+WHITE = 1
+BLACK = 2
 
 DIRECTIONS = [np.array([-1, 0]), np.array([-1, 1]), np.array([0, 1]), np.array([1, 1]), np.array([1, 0]),
                       np.array([1, -1]), np.array([0, -1]), np.array([-1, -1])]
@@ -21,10 +20,10 @@ def create_initial_board():
     board = np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=np.uint32)
 
     # add initial pieces in middle
-    board[BOARD_SIZE//2 - 1, BOARD_SIZE//2 - 1] = PLAYER_REPRES[WHITE]
-    board[BOARD_SIZE//2, BOARD_SIZE//2] = PLAYER_REPRES[WHITE]
-    board[BOARD_SIZE//2 - 1, BOARD_SIZE//2] = PLAYER_REPRES[BLACK]
-    board[BOARD_SIZE//2, BOARD_SIZE//2 - 1] = PLAYER_REPRES[BLACK]
+    board[BOARD_SIZE//2 - 1, BOARD_SIZE//2 - 1] = WHITE
+    board[BOARD_SIZE//2, BOARD_SIZE//2] = WHITE
+    board[BOARD_SIZE//2 - 1, BOARD_SIZE//2] = BLACK
+    board[BOARD_SIZE//2, BOARD_SIZE//2 - 1] = BLACK
 
     return board
 
@@ -67,7 +66,7 @@ class Reversi():
                 if current_location_state == 0:
                     break
                 # connected own piece, so everything inbetween (possibly zero) can be turned
-                if current_location_state == PLAYER_REPRES[self.current_player]:
+                if current_location_state == self.current_player:
                     disks_to_turn += current_disks
                     break
 
@@ -96,7 +95,7 @@ class Reversi():
 
         # turn new pieces
         for location in new_disk_locations:
-            new_board[location[0], location[1]] = PLAYER_REPRES[self.current_player]
+            new_board[location[0], location[1]] = self.current_player
 
         return Reversi(new_board, self.other_player())
 
@@ -108,16 +107,16 @@ class Reversi():
         points_black = np.sum(self.board >> 1)
 
         if points_white > points_black:
-            return PLAYER_REPRES[WHITE], points_white, points_black
+            return WHITE, points_white, points_black
 
         if points_black > points_white:
-            return PLAYER_REPRES[BLACK], points_white, points_black
+            return BLACK, points_white, points_black
 
         # tie
         return 0, points_white, points_black
 
     def __str__(self):
-        return str(self.board) + "\n" + "PLAYER: " + str(PLAYER_REPRES[self.current_player])
+        return str(self.board) + "\n" + "PLAYER: " + str(self.current_player)
 
 
 if __name__ == '__main__':
