@@ -27,6 +27,33 @@ class Node():
         self.n = 0
         self.edges = []
 
+    def has_policy(self):
+        # node only has a policy if it has been expanded and all edges have been visited
+        if len(self.edges) == 0:
+            return False
+        for edge in self.edges:
+            if edge.out_node.n == 0:
+                return False
+        return True
+
+    def policy(self):
+        assert len(self.edges) > 0, "Cannot calculate policy. Node not expanded"
+
+        # sum up edge visits
+        total_n = 0
+        for edge in self.edges:
+            assert edge.out_node.n > 0, "Cannot calculate policy. Not all edges visited."
+            total_n += edge.out_node.n
+
+        policy = []
+        for edge in self.edges:
+            # literature mentions steering on n is good enough
+            p = edge.out_node.n / total_n
+
+            policy.append((p, edge.action))
+
+        return policy
+
     def max_ucb_child_node(self):
         assert len(self.edges) > 0, "Cannot calculate best ucb. Node not expanded"
 
@@ -49,6 +76,8 @@ class Node():
 
     def __str__(self):
         return "value: %d, n_visits: %d, n_edges %d" % (self.v, self.n, len(self.edges))
+
+
 class MCTS():
     def __init__(self, game):
         self.root = Node(game)
@@ -57,7 +86,7 @@ class MCTS():
         # move to leaf
         leaf, breadcrumbs = self.moveToLeaf()
 
-        # if already visited, expand leaf first, and move to univisted child node
+        # if already visited, expand leaf first, and move to unvisted child node
         if leaf.n > 0:
             leaf.expand()
 
@@ -74,6 +103,7 @@ class MCTS():
             # TODO: limit depth?
             moves = simulation.legal_moves()
             if len(moves) > 0:
+                # TODO: replace with NN
                 simulation = simulation.perform_move(random.choice(moves))
             else:
                 break
@@ -116,5 +146,7 @@ if __name__ == '__main__':
     for i in range(10):
         mcts.play_game()
     mcts.show()
+
+    print(mcts.root.policy())
 
     # TODO: backtracking controleren
