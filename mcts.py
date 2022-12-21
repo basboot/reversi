@@ -95,7 +95,6 @@ class MCTS():
 
         breadcrumbs = [current_node]
 
-        # TODO: add breadcrumbs for update
         while len(current_node.edges) > 0:
             current_node = current_node.max_ucb_child_node()
             breadcrumbs.append(current_node)
@@ -117,3 +116,5 @@ if __name__ == '__main__':
     for i in range(10):
         mcts.play_game()
     mcts.show()
+
+    # TODO: backtracking controleren
