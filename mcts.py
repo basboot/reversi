@@ -103,7 +103,15 @@ class MCTS():
             else:
                 break
 
-        return game
+        winning_player, _, _ = game.winning_player()
+
+        value = 0
+        if game.current_player == winning_player:
+            value = 1
+        if game.other_player() == winning_player:
+            value = -1
+
+        return value
 
     def simulate_game(self):
         # move to leaf
@@ -121,20 +129,18 @@ class MCTS():
                 pass
 
         # rollout rest of the game to find a value
-        simulation = self.rollout(game)
-
-        winning_player, _, _ = simulation.winning_player()
+        value = self.rollout(game) # value for current player
 
         # backpropagate value
         for breadcrumb in breadcrumbs:
             breadcrumb.n += 1
-            value = 0
-            if breadcrumb.game.current_player == winning_player:
-                value = 1
-            if breadcrumb.game.other_player() == winning_player:
-                value = -1
 
-            breadcrumb.v += value
+            # same player gets same reward, other gets negated reward
+            if breadcrumb.game.current_player == game.current_player:
+                breadcrumb.v += value
+            else:
+                breadcrumb.v -= value
+
 
     def moveToLeaf(self):
         current_node = self.root
