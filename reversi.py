@@ -91,10 +91,10 @@ class Reversi():
 
         return moves
 
-    def perform_move(self, new_disk_locations):
+    def perform_move(self, new_disk_location):
         new_board = self.board.copy()
 
-        new_disk_locations = self.find_disks_to_turn(new_disk_locations) + [new_disk_locations]
+        new_disk_locations = self.find_disks_to_turn(new_disk_location) + [new_disk_location]
 
         # turn new pieces
         for location in new_disk_locations:
