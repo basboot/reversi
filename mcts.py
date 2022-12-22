@@ -93,7 +93,19 @@ class MCTS():
         self.root = Node(game)
         self.nodes = {self.root.get_id(): self.root}
 
-    def play_game(self):
+    def rollout(self, game):
+        while True:
+            # TODO: limit depth?
+            moves = game.legal_moves()
+            if len(moves) > 0:
+                # TODO: replace with NN
+                game = game.perform_move(random.choice(moves))
+            else:
+                break
+
+        return game
+
+    def simulate_game(self):
         # move to leaf
         leaf, breadcrumbs = self.moveToLeaf()
 
@@ -108,16 +120,9 @@ class MCTS():
                 # Node is terminal,, so we cannot move further
                 pass
 
-        # simulate rest of the game to find a value
-        simulation = leaf.game
-        while True:
-            # TODO: limit depth?
-            moves = simulation.legal_moves()
-            if len(moves) > 0:
-                # TODO: replace with NN
-                simulation = simulation.perform_move(random.choice(moves))
-            else:
-                break
+        # rollout rest of the game to find a value
+        simulation = self.rollout(game)
+
         winning_player, _, _ = simulation.winning_player()
 
         # backpropagate value
@@ -155,7 +160,7 @@ if __name__ == '__main__':
     game = Reversi()
     mcts = MCTS(game)
     for i in range(100):
-        mcts.play_game()
+        mcts.simulate_game()
     mcts.show()
 
     print(mcts.root.policy())
