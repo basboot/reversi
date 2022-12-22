@@ -27,6 +27,9 @@ class Node():
         self.n = 0
         self.edges = []
 
+    def get_id(self):
+        return self.game.get_id()
+
     def has_policy(self):
         # node only has a policy if it has been expanded and all edges have been visited
         if len(self.edges) == 0:
@@ -68,10 +71,17 @@ class Node():
 
         return max_child
 
-    def expand(self):
+    def expand(self, nodes):
         for move in self.game.legal_moves():
             next_game = self.game.perform_move(move)
-            next_edge = Edge(move, self, Node(next_game))
+            next_node = Node(next_game)
+            # if node already exists, connect node to existing node instead of new node
+            if next_node.get_id() in nodes:
+                next_node = nodes[next_node.get_id()]
+            else:
+                nodes[next_node.get_id()] = next_node
+
+            next_edge = Edge(move, self, next_node)
             self.edges.append(next_edge)
 
     def __str__(self):
@@ -81,6 +91,7 @@ class Node():
 class MCTS():
     def __init__(self, game):
         self.root = Node(game)
+        self.nodes = {self.root.get_id(): self.root}
 
     def play_game(self):
         # move to leaf
@@ -88,7 +99,7 @@ class MCTS():
 
         # if already visited, expand leaf first, and move to unvisted child node
         if leaf.n > 0:
-            leaf.expand()
+            leaf.expand(self.nodes)
 
             if len(leaf.edges) > 0:
                 leaf = leaf.max_ucb_child_node()
@@ -143,7 +154,7 @@ class MCTS():
 if __name__ == '__main__':
     game = Reversi()
     mcts = MCTS(game)
-    for i in range(10):
+    for i in range(100):
         mcts.play_game()
     mcts.show()
 

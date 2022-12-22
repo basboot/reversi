@@ -51,6 +51,9 @@ class Reversi():
         if current_player is None:
             self.current_player = BLACK # black begins
 
+    def get_id(self):
+        return tuple(map(tuple, self.board)) + (self.current_player,)
+
     def find_disks_to_turn(self, new_disk_location):
         location = np.array(new_disk_location)
 
