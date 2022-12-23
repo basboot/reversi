@@ -1,3 +1,5 @@
+import numpy as np
+
 import reversi
 from reversi import Reversi
 import tensorflow as tf
@@ -10,12 +12,11 @@ PIECE_TYPE_LAYERS = 2
 PLAYER_TURN_LAYER = 1
 VALUE_SIZE = 1
 
-# wrapper class to add functionality to the game reversi for AlphaZero
-class AlphaReversi(Reversi):
-    def __init__(self):
-        super().__init__()
+# helper class with functionality needed by AlphaZero for playing Reversi
+class AlphaReversi():
 
-    def create_nn(self):
+    @staticmethod
+    def create_nn():
         # TODO: dummy network, need to select topology
 
         # use inputs from gamestate_stack
@@ -25,11 +26,12 @@ class AlphaReversi(Reversi):
         t = inputs
 
         t = tf.keras.layers.Flatten()(t)
-        t = tf.keras.layers.Dense(BOARD_SIZE * BOARD_SIZE + VALUE_SIZE, kernel_initializer='random_normal',
+        outputPolicy = tf.keras.layers.Dense(BOARD_SIZE * BOARD_SIZE, kernel_initializer='random_normal',
                                   bias_initializer='zeros')(t)
-        outputs = t
+        outputValue = tf.keras.layers.Dense(VALUE_SIZE, kernel_initializer='random_normal',
+                                  bias_initializer='zeros')(t)
 
-        model = tf.keras.models.Model(inputs, outputs)
+        model = tf.keras.models.Model(inputs, [outputPolicy, outputValue])
 
         model.compile(
             optimizer='adam',
@@ -40,7 +42,24 @@ class AlphaReversi(Reversi):
 
         return model
 
+
+
     # TODO:
     # - gamestate to tensor
     # - push gamestate in tensor history stack
+    # - policy and value to tensor
     # - convert prediction to policy and value
+    # - filter legal actions / renormalize policy (in alphazero?)
+
+
+if __name__ == '__main__':
+    nn = AlphaReversi.create_nn()
+
+    dummy_input = np.zeros((BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER))
+
+    print(dummy_input.shape)
+
+    t_gamestate = tf.keras.backend.constant(np.reshape(dummy_input, (1, 8, 8, 3)))
+
+    p, v = nn.predict(t_gamestate)
+    print(p, v)
