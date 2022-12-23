@@ -25,6 +25,10 @@ class AlphaReversi(Reversi):
         else:
             self.full_gamestate = full_gamestate
 
+        self.input_dimension = (BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER)
+        # policy only
+        self.output_dimension = (BOARD_SIZE * BOARD_SIZE,)
+
     # override to also update the full gamestate for alpha
     def perform_move(self, new_disk_location):
         new_board, new_player = self.perform_move_on_board(new_disk_location)

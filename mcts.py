@@ -1,6 +1,9 @@
 import math
 import random
 
+import numpy as np
+
+from alpha_reversi import AlphaReversi
 from reversi import Reversi
 
 C = 2 # constant to balance exploration vs exploitation (higher = more exploration)
@@ -18,7 +21,13 @@ class Edge():
         else:
             # exploitation average value of child node
             # exoploitation constant x square root of natural log of parent visits divided by child visits
-            return (self.out_node.v / self.out_node.n) + C * math.sqrt(math.log(self.in_node.n / self.out_node.n))
+            # print(self.in_node.n, self.out_node.n)
+            visit_ratio = self.in_node.n / self.out_node.n
+            # TODO: the graph is not acyclic because we avoid duplicate nodes... should this be changed?
+            if visit_ratio < 1:
+                visit_ratio = 1
+
+            return (self.out_node.v / self.out_node.n) + C * math.sqrt(math.log(visit_ratio))
 
 class Node():
     def __init__(self, game):
@@ -93,12 +102,46 @@ class MCTS():
         self.root = Node(game)
         self.nodes = {self.root.get_id(): self.root}
 
+    def create_training_samples(self, n):
+
+        nodes_list = list(self.nodes.keys())
+
+        x = np.zeros((n,) + self.root.game.input_dimension)
+        y_p = np.zeros((n,) + self.root.game.output_dimension)
+        y_v = np.zeros(n)
+
+        i = 0
+        while i < n:
+            random_node = self.nodes[random.choice(nodes_list)]
+            if not random_node.has_policy():
+                continue
+
+            gamestate = random_node.game.full_gamestate
+            policy = random_node.policy()
+            v = random_node.v / random_node.n
+
+            x[i] = gamestate
+            y_p[i] = self.root.game.policy_to_p(policy)
+            y_v[i] = v
+
+            i+=1
+
+        return x, y_p, y_v
+
+
+
+
+
+
+
+
+
     def rollout(self, game):
+        # TODO: use nn to predict the value
         while True:
             # TODO: limit depth?
             moves = game.legal_moves()
             if len(moves) > 0:
-                # TODO: replace with NN
                 game = game.perform_move(random.choice(moves))
             else:
                 break
@@ -119,6 +162,7 @@ class MCTS():
 
         # if already visited, expand leaf first, and move to unvisted child node
         if leaf.n > 0:
+            # TODO: use nn to fill leaves with policy (find out when this is used!) and use v
             leaf.expand(self.nodes)
 
             if len(leaf.edges) > 0:
@@ -163,12 +207,15 @@ class MCTS():
             self.show_children(edge.out_node, level + 1)
 
 if __name__ == '__main__':
-    game = Reversi()
+    game = AlphaReversi()
     mcts = MCTS(game)
     for i in range(100):
         mcts.simulate_game()
-    mcts.show()
+    #mcts.show()
 
     print(mcts.root.policy())
+
+    x, y_p, y_v = mcts.create_training_samples(2)
+    print(y_p)
 
     # TODO: backtracking controleren
