@@ -92,7 +92,7 @@ class Reversi():
 
         return moves
 
-    def perform_move(self, new_disk_location):
+    def perform_move_on_board(self, new_disk_location):
         new_board = self.board.copy()
 
         new_disk_locations = self.find_disks_to_turn(new_disk_location) + [new_disk_location]
@@ -101,7 +101,12 @@ class Reversi():
         for location in new_disk_locations:
             new_board[location[0], location[1]] = self.current_player
 
-        return Reversi(new_board, self.other_player())
+        return new_board, self.other_player()
+
+    def perform_move(self, new_disk_location):
+        new_board, new_player = self.perform_move_on_board(new_disk_location)
+
+        return Reversi(new_board, new_player)
 
     def other_player(self):
         return BLACK if self.current_player == WHITE else WHITE
@@ -130,7 +135,7 @@ if __name__ == '__main__':
 
     start = time.time()
 
-    for i in range(10000):
+    for i in range(10):
         game = Reversi()
         while True:
             moves = game.legal_moves()
