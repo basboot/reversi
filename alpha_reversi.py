@@ -14,8 +14,23 @@ PIECE_TYPE_LAYERS = 2
 PLAYER_TURN_LAYER = 1
 VALUE_SIZE = 1
 
-# helper class with functionality needed by AlphaZero for playing Reversi
-class AlphaReversi():
+# wrapper class with functionality needed by AlphaZero for playing Reversi
+class AlphaReversi(Reversi):
+    def __init__(self, board=None, current_player=None, full_gamestate=None):
+        super().__init__(board, current_player)
+
+        if full_gamestate is None:
+            self.full_gamestate = self.init_full_gamestate()
+            self.full_gamestate = self.push_move_to_gamestate(self.full_gamestate, self.board, self.current_player)
+        else:
+            self.full_gamestate = full_gamestate
+
+    # override to also update the full gamestate for alpha
+    def perform_move(self, new_disk_location):
+        new_board, new_player = self.perform_move_on_board(new_disk_location)
+        new_full_gamestate = self.push_move_to_gamestate(self.full_gamestate, new_board, new_player)
+
+        return AlphaReversi(new_board, new_player, new_full_gamestate)
 
     @staticmethod
     def create_nn():
@@ -74,7 +89,7 @@ class AlphaReversi():
         return np.zeros((BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER))
 
     @staticmethod
-    def push_move_to_gamestate(gamestate_stack, game:Reversi):
+    def push_move_to_gamestate(gamestate_stack, board, current_player):
         # do not modify original
         gamestate_stack = np.copy(gamestate_stack)
 
@@ -83,9 +98,9 @@ class AlphaReversi():
                 gamestate_stack[:, :, PIECE_TYPE_LAYERS:-PLAYER_TURN_LAYER]
 
         gamestate_stack[:, :, -PLAYER_TURN_LAYER] = \
-            np.zeros((BOARD_SIZE, BOARD_SIZE)) if game.current_player == reversi.BLACK else np.ones((BOARD_SIZE, BOARD_SIZE))
-        gamestate_stack[:, :, -(PLAYER_TURN_LAYER + 1)] = (game.board & 1) # white pieces
-        gamestate_stack[:, :, -(PLAYER_TURN_LAYER + 2)] = (game.board >> 1) # black pieces
+            np.zeros((BOARD_SIZE, BOARD_SIZE)) if current_player == reversi.BLACK else np.ones((BOARD_SIZE, BOARD_SIZE))
+        gamestate_stack[:, :, -(PLAYER_TURN_LAYER + 1)] = (board & 1) # white pieces
+        gamestate_stack[:, :, -(PLAYER_TURN_LAYER + 2)] = (board >> 1) # black pieces
 
         return gamestate_stack
 
@@ -118,9 +133,9 @@ if __name__ == '__main__':
     print(AlphaReversi.policy_to_p(policy))
 
     full_game = AlphaReversi.init_full_gamestate()
-    full_game = AlphaReversi.push_move_to_gamestate(full_game, game)
+    full_game = AlphaReversi.push_move_to_gamestate(full_game, game.board, game.current_player)
     game = game.perform_move(random.choice(game.legal_moves()))
-    full_game = AlphaReversi.push_move_to_gamestate(full_game, game)
+    full_game = AlphaReversi.push_move_to_gamestate(full_game, game.board, game.current_player)
 
     layer = -3
     print(full_game[:, :, layer])
