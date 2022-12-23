@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 
 import reversi
@@ -42,7 +44,50 @@ class AlphaReversi():
 
         return model
 
+    # filter legal actions from prediction and normalize
+    @staticmethod
+    def p_to_policy(p, legal_actions):
+        policy = []
+        sum_priors = 0
+        for action in legal_actions:
+            prior = p[BOARD_SIZE * action[0] + action[1]]
+            sum_priors += prior
+            policy.append([prior, action])
 
+        # normalization only possible when sum of priors is not equal to zero
+        if sum_priors > 0:
+            for p_action in policy:
+                p_action[0] /= sum_priors
+
+        return policy
+
+    @staticmethod
+    def policy_to_p(policy):
+        p = np.zeros(BOARD_SIZE * BOARD_SIZE)
+        for p_action in policy:
+            p[BOARD_SIZE * p_action[1][0] + p_action[1][1]] = p_action[0]
+
+        return p
+
+    @staticmethod
+    def init_full_gamestate():
+        return np.zeros((BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER))
+
+    @staticmethod
+    def push_move_to_gamestate(gamestate_stack, game:Reversi):
+        # do not modify original
+        gamestate_stack = np.copy(gamestate_stack)
+
+        if GAMESTATE_HISTORY_SIZE > 1:
+            gamestate_stack[:, :, :-(PIECE_TYPE_LAYERS + PLAYER_TURN_LAYER)] = \
+                gamestate_stack[:, :, PIECE_TYPE_LAYERS:-PLAYER_TURN_LAYER]
+
+        gamestate_stack[:, :, -PLAYER_TURN_LAYER] = \
+            np.zeros((BOARD_SIZE, BOARD_SIZE)) if game.current_player == reversi.BLACK else np.ones((BOARD_SIZE, BOARD_SIZE))
+        gamestate_stack[:, :, -(PLAYER_TURN_LAYER + 1)] = (game.board & 1) # white pieces
+        gamestate_stack[:, :, -(PLAYER_TURN_LAYER + 2)] = (game.board >> 1) # black pieces
+
+        return gamestate_stack
 
     # TODO:
     # - gamestate to tensor
@@ -59,7 +104,23 @@ if __name__ == '__main__':
 
     print(dummy_input.shape)
 
-    t_gamestate = tf.keras.backend.constant(np.reshape(dummy_input, (1, 8, 8, 3)))
+    t_gamestate = tf.keras.backend.constant(np.reshape(dummy_input, (1, BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER)))
 
     p, v = nn.predict(t_gamestate)
     print(p, v)
+
+    game = Reversi()
+    print(AlphaReversi.p_to_policy(p[0], game.legal_moves()))
+
+    policy = [(0.29292929292929293, (2, 3)), (0.26262626262626265, (3, 2)), (0.23232323232323232, (4, 5)),
+              (0.21212121212121213, (5, 4))]
+
+    print(AlphaReversi.policy_to_p(policy))
+
+    full_game = AlphaReversi.init_full_gamestate()
+    full_game = AlphaReversi.push_move_to_gamestate(full_game, game)
+    game = game.perform_move(random.choice(game.legal_moves()))
+    full_game = AlphaReversi.push_move_to_gamestate(full_game, game)
+
+    layer = -3
+    print(full_game[:, :, layer])

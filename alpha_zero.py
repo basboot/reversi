@@ -11,3 +11,7 @@ class AlphaZero():
     # - predict and train (alphazero)
     # - simulate games
 
+    def predict_best_move(self):
+        # TODO: add real prediction
+        moves = self.alpha_game.legal_moves()
+        pass

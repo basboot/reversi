@@ -1,4 +1,5 @@
 import random
+import time
 
 import numpy as np
 
@@ -79,7 +80,7 @@ class Reversi():
 
         return disks_to_turn
 
-    def legal_moves(self,):
+    def legal_moves(self):
         moves = []
 
         for i in range(BOARD_SIZE):
@@ -123,17 +124,31 @@ class Reversi():
 
 
 if __name__ == '__main__':
-    game = Reversi()
+    game = None
 
-    while True:
-        moves = game.legal_moves()
-        if len(moves) == 0:
-            # game over
-            break
+    results = [0, 0, 0]
 
-        game = game.perform_move(random.choice(moves))
-        print(game)
+    start = time.time()
 
-    print("win for: ", game.winning_player())
+    for i in range(10000):
+        game = Reversi()
+        while True:
+            moves = game.legal_moves()
+            if len(moves) == 0:
+                # game over
+                break
 
+            game = game.perform_move(random.choice(moves))
+            #print(game)
+
+        result, _, _ = game.winning_player()
+        results[result] += 1
+
+    results.reverse()
+    print(results)
+
+    end = time.time()
+    print("Time consumed in working: ", end - start)
+
+    # [4199, 5411, 390]
 
