@@ -29,6 +29,9 @@ class AlphaReversi(Reversi):
         # policy only
         self.output_dimension = (BOARD_SIZE * BOARD_SIZE,)
 
+    def network_name(self):
+        return "alpha_reversi_test"
+
     # override to also update the full gamestate for alpha
     def perform_move(self, new_disk_location):
         new_board, new_player = self.perform_move_on_board(new_disk_location)

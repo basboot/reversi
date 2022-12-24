@@ -1,6 +1,9 @@
 import math
+import os
 
 from mcts import MCTS
+
+MODEL_PATH = "./models/"
 
 
 class AlphaZero():
@@ -14,6 +17,19 @@ class AlphaZero():
     # - cleanup policy and normalize (alphazero)
     # - predict and train (alphazero)
     # - simulate games
+
+    def load_nn_values(self):
+        # load model weights from disk, if exists
+        filename = MODEL_PATH + self.alpha_game.network_name()
+        print("LOAD: ", filename)
+        # sometimes keras replaces .h5 with multiple data files and a .index
+        if os.path.isfile(filename + ".h5") or os.path.isfile(filename + ".index"):
+            print("Load model: ", filename)
+            self.nn.load_weights(filename)
+
+    def save_nn_values(self):
+        filename = MODEL_PATH + self.alpha_game.network_name()
+        self.nn.save_weights(filename)
 
     def predict_best_move(self, full_gamestate):
         # create policy from prediction and legal actions
