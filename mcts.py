@@ -129,13 +129,6 @@ class MCTS():
         return x, y_p, y_v
 
 
-
-
-
-
-
-
-
     def rollout(self, game):
         # TODO: use nn to predict the value
         while True:
@@ -156,9 +149,14 @@ class MCTS():
 
         return value
 
-    def simulate_game(self):
+    def simulate_game(self, current_node=None):
+        if current_node is None:
+            current_node = self.root
+
+        assert current_node.get_id() in self.nodes, "Cannot simulate starting from unknown node"
+
         # move to leaf
-        leaf, breadcrumbs = self.moveToLeaf()
+        leaf, breadcrumbs = self.moveToLeaf(current_node)
 
         # if already visited, expand leaf first, and move to unvisted child node
         if leaf.n > 0:
@@ -173,6 +171,7 @@ class MCTS():
                 pass
 
         # rollout rest of the game to find a value
+        game = leaf.game
         value = self.rollout(game) # value for current player
 
         # backpropagate value
@@ -185,10 +184,7 @@ class MCTS():
             else:
                 breadcrumb.v -= value
 
-
-    def moveToLeaf(self):
-        current_node = self.root
-
+    def moveToLeaf(self, current_node):
         breadcrumbs = [current_node]
 
         while len(current_node.edges) > 0:
