@@ -10,8 +10,12 @@ def greedy_player(game):
 
     for move in moves:
         virtual_game = game.perform_move(move)
-        _, white_points, black_points = game.winning_player()
+        # get points from next gamestate
+        _, white_points, black_points = virtual_game.winning_player()
+        # use player from current gamestate
         my_points = white_points if game.current_player == WHITE else black_points
+
+        print(my_points)
 
         if my_points > best_points:
             best_move = move
