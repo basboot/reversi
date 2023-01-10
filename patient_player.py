@@ -1,6 +1,7 @@
 import math
 from reversi import *
 
+# Make move that results in least points
 def patient_player(game):
     moves = game.legal_moves()
 

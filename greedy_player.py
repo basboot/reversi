@@ -1,6 +1,7 @@
 import math
 from reversi import *
 
+# Make move that results in most points
 def greedy_player(game):
     moves = game.legal_moves()
 
