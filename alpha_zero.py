@@ -1,7 +1,9 @@
 import math
 import os
+import random
 
 from mcts import MCTS
+from alpha_reversi import *
 
 MODEL_PATH = "./models/"
 
@@ -61,5 +63,24 @@ class AlphaZero():
     def fit(self):
         pass
 
+    def player(self, game):
+        # if game not in mcts, replace mcts
+        N_SIMULATIONS = 100
+        for n in range(N_SIMULATIONS):
+            self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
 
+        has_policy = self.mcts.nodes[game.get_id()].has_policy()
 
+        if has_policy:
+            return self.best_move_from_policy(self.mcts.nodes[game.get_id()].policy())
+        else:
+            print("no policy, return random move")
+            return random.choice(game.legal_moves())
+
+if __name__ == '__main__':
+    game = AlphaReversi()
+    alpha_zero = AlphaZero(game)
+
+    move = alpha_zero.player(game)
+
+    print(move)
