@@ -15,8 +15,6 @@ def greedy_player(game):
         # use player from current gamestate
         my_points = white_points if game.current_player == WHITE else black_points
 
-        print(my_points)
-
         if my_points > best_points:
             best_move = move
             best_points = my_points
