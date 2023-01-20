@@ -6,7 +6,7 @@ import numpy as np
 from alpha_reversi import AlphaReversi
 from reversi import Reversi
 
-C = 2 # constant to balance exploration vs exploitation (higher = more exploration)
+C = 1 # constant to balance exploration vs exploitation (higher = more exploration)
 
 class Edge():
     def __init__(self, action, in_node, out_node):
