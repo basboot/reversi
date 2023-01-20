@@ -65,6 +65,12 @@ class AlphaZero():
 
     def player(self, game):
         # if game not in mcts, replace mcts
+        if game.get_id() not in self.mcts.nodes:
+            print("Gamestate not in MCTS, create new MCTS with this gamestate as root")
+            self.mcts = MCTS(game)
+
+        assert game.get_id() in self.mcts.nodes, "node not in mcts"
+
         N_SIMULATIONS = 100
         for n in range(N_SIMULATIONS):
             self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
