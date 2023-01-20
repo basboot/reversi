@@ -179,10 +179,11 @@ class MCTS():
             breadcrumb.n += 1
 
             # same player gets same reward, other gets negated reward
-            if breadcrumb.game.current_player == game.current_player:
-                breadcrumb.v += value
-            else:
+            # TODO: I reversed this because ucb is calculated based on the next state
+            if breadcrumb.game.current_player == self.root.game.current_player:
                 breadcrumb.v -= value
+            else:
+                breadcrumb.v += value
 
     def moveToLeaf(self, current_node):
         breadcrumbs = [current_node]
