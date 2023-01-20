@@ -142,9 +142,9 @@ class MCTS():
         winning_player, _, _ = game.winning_player()
 
         value = 0
-        if game.current_player == winning_player:
+        if self.root.game.current_player == winning_player:
             value = 1
-        if game.other_player() == winning_player:
+        if self.root.game.other_player() == winning_player:
             value = -1
 
         return value
