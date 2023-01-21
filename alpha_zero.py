@@ -21,20 +21,20 @@ class AlphaZero():
     # - simulate games
 
     def load_nn_values(self):
-        # TODO: change to tf format to also save the optimizer status
-        #  https://stackoverflow.com/questions/42666046/loading-a-trained-keras-model-and-continue-training
-
         # load model weights from disk, if exists
         filename = MODEL_PATH + self.alpha_game.network_name()
         print("LOAD: ", filename)
         # sometimes keras replaces .h5 with multiple data files and a .index
-        if os.path.isfile(filename + ".h5") or os.path.isfile(filename + ".index"):
+        # TODO: check if extension .tf is correct
+        if os.path.isfile(filename + ".tf") or os.path.isfile(filename + ".h5") or os.path.isfile(filename + ".index"):
             print("Load model: ", filename)
             self.nn.load_weights(filename)
 
     def save_nn_values(self):
         filename = MODEL_PATH + self.alpha_game.network_name()
-        self.nn.save_weights(filename)
+        # Use tf format to also save optimizer state
+        #  https://stackoverflow.com/questions/42666046/loading-a-trained-keras-model-and-continue-training
+        self.nn.save_weights(filename, save_format='tf')
 
     @staticmethod
     def best_move_from_policy(policy):
@@ -65,19 +65,19 @@ class AlphaZero():
             print("Gamestate not in MCTS, create new MCTS with this gamestate as root")
             self.mcts = MCTS(game)
 
-        N_SIMULATIONS = 1000000
+        N_SIMULATIONS = 100000
         for n in range(N_SIMULATIONS):
             self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
 
     def mcts_extract_training_examples(self):
-        N_SAMPLES = 100000
-        N_VALIDATION = 1000
+        N_SAMPLES = 10000
+        N_VALIDATION = 100
 
         # arrays with numpy objects in correct shape
         x, y_p, y_v = self.mcts.create_training_samples(N_SAMPLES)
         v_x, v_y_p, v_y_v = self.mcts.create_training_samples(N_VALIDATION)
 
-        print(len(x))
+        # print(len(x))
 
         tf_x = tf.stack(x)
         tf_y_p = tf.stack(y_p)
@@ -117,9 +117,13 @@ if __name__ == '__main__':
     game = AlphaNim()
     alpha_zero = AlphaZero(game)
 
+    alpha_zero.load_nn_values()
+
     alpha_zero.mcts_training()
 
     alpha_zero.nn_fit_training_examples()
+
+    alpha_zero.save_nn_values()
 
     move = alpha_zero.player(game)
 
