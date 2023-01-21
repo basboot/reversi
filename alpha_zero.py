@@ -48,11 +48,13 @@ class AlphaZero():
                 best_move = p_action[1]
         return best_move  # None if there is no move
 
-    def predict_best_move(self, full_gamestate):
+    def predict_best_move(self, game):
         # create policy from prediction and legal actions
-        legal_actions = self.alpha_game.legal_moves()
-        p, v = self.nn.predict(full_gamestate)
-        policy = self.alpha_game.p_to_policy(p, legal_actions)
+        legal_actions = game.legal_moves()
+        p, v = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+
+        # one sample, one prediction
+        policy = self.alpha_game.p_to_policy(p[0], legal_actions)
 
         return self.best_move_from_policy(policy)
 
@@ -126,5 +128,7 @@ if __name__ == '__main__':
     alpha_zero.save_nn_values()
 
     move = alpha_zero.player(game)
+
+    print(alpha_zero.predict_best_move())
 
     print(move)
