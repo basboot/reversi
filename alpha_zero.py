@@ -95,25 +95,30 @@ class AlphaZero():
         x_train, y_train, x_validation, y_validation = self.mcts_extract_training_examples()
         self.nn.fit(x_train, y_train, epochs=10, validation_data = (x_validation,y_validation))
 
-    def player(self, game):
-        # if game not in mcts, replace mcts
-        if game.get_id() not in self.mcts.nodes:
-            print("Gamestate not in MCTS, create new MCTS with this gamestate as root")
-            self.mcts = MCTS(game)
+    def player(self, game, prediction_only=True):
 
-        assert game.get_id() in self.mcts.nodes, "node not in mcts"
+        if not prediction_only:
+            # TODO: put alpha learning here
+            # if game not in mcts, replace mcts
+            if game.get_id() not in self.mcts.nodes:
+                print("Gamestate not in MCTS, create new MCTS with this gamestate as root")
+                self.mcts = MCTS(game)
 
-        N_SIMULATIONS = 10
-        for n in range(N_SIMULATIONS):
-            self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
+            assert game.get_id() in self.mcts.nodes, "node not in mcts"
 
-        has_policy = self.mcts.nodes[game.get_id()].has_policy()
+            N_SIMULATIONS = 10
+            for n in range(N_SIMULATIONS):
+                self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
 
-        if has_policy:
-            return self.best_move_from_policy(self.mcts.nodes[game.get_id()].policy())
-        else:
-            print("no policy, return random move")
-            return random.choice(game.legal_moves())
+            has_policy = self.mcts.nodes[game.get_id()].has_policy()
+
+            if has_policy:
+                return self.best_move_from_policy(self.mcts.nodes[game.get_id()].policy())
+            else:
+                print("no policy, return random move")
+                return random.choice(game.legal_moves())
+
+        return self.predict_best_move(game)
 
 if __name__ == '__main__':
     game = AlphaNim()
