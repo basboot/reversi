@@ -7,7 +7,7 @@ from nim import Nim
 import tensorflow as tf
 
 BOARD_SIZE = nim.HEAPS
-GAMESTATE_HISTORY_SIZE = 2
+GAMESTATE_HISTORY_SIZE = 1
 
 # do not change. constants are for readability only
 PIECE_TYPE_LAYERS = 1
@@ -15,7 +15,7 @@ PLAYER_TURN_LAYER = 1
 VALUE_SIZE = 1
 
 INPUT_DIMENSION = (BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER)
-OUTPUT_DIMENSION = (BOARD_SIZE * BOARD_SIZE)
+OUTPUT_DIMENSION = (BOARD_SIZE * BOARD_SIZE,)
 
 # wrapper class with functionality needed by AlphaZero for playing Reversi
 class AlphaNim(nim.Nim):
@@ -53,7 +53,7 @@ class AlphaNim(nim.Nim):
         t = inputs
 
         t = tf.keras.layers.Flatten()(t)
-        outputPolicy = tf.keras.layers.Dense(OUTPUT_DIMENSION, kernel_initializer='random_normal',
+        outputPolicy = tf.keras.layers.Dense(BOARD_SIZE * BOARD_SIZE, kernel_initializer='random_normal',
                                   bias_initializer='zeros')(t)
         outputValue = tf.keras.layers.Dense(VALUE_SIZE, kernel_initializer='random_normal',
                                   bias_initializer='zeros')(t)
@@ -63,7 +63,8 @@ class AlphaNim(nim.Nim):
         model.compile(
             optimizer='adam',
             # loss=tf.keras.losses.Huber(), # SparseCategoricalCrossentropy(from_logits=True),
-            loss=tf.keras.losses.MeanSquaredError()
+            loss=tf.keras.losses.MeanSquaredError(),
+            metrics=['accuracy']
         )
         model.summary()
 
