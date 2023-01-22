@@ -15,6 +15,8 @@ class AlphaZero():
 
         self.nn = alpha_game.create_nn()
 
+        self.load_nn_values()
+
     # TODO
     # - cleanup policy and normalize (alphazero)
     # - predict and train (alphazero)
@@ -51,7 +53,7 @@ class AlphaZero():
     def predict_best_move(self, game):
         # create policy from prediction and legal actions
         legal_actions = game.legal_moves()
-        p, v = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+        p, _ = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
 
         # one sample, one prediction
         policy = self.alpha_game.p_to_policy(p[0], legal_actions)
@@ -72,7 +74,7 @@ class AlphaZero():
             self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
 
     def mcts_extract_training_examples(self):
-        N_SAMPLES = 10000
+        N_SAMPLES = 1000
         N_VALIDATION = 100
 
         # arrays with numpy objects in correct shape
@@ -95,10 +97,11 @@ class AlphaZero():
         x_train, y_train, x_validation, y_validation = self.mcts_extract_training_examples()
         self.nn.fit(x_train, y_train, epochs=10, validation_data = (x_validation,y_validation))
 
-    def player(self, game, prediction_only=True):
+    def player(self, game, prediction_only=False, mcts_only=False):
 
+        # prediction only = play without learning
         if not prediction_only:
-            # TODO: put alpha learning here
+            # build mtcs
             # if game not in mcts, replace mcts
             if game.get_id() not in self.mcts.nodes:
                 print("Gamestate not in MCTS, create new MCTS with this gamestate as root")
@@ -106,17 +109,23 @@ class AlphaZero():
 
             assert game.get_id() in self.mcts.nodes, "node not in mcts"
 
-            N_SIMULATIONS = 10
+            N_SIMULATIONS = 100
             for n in range(N_SIMULATIONS):
                 self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
 
             has_policy = self.mcts.nodes[game.get_id()].has_policy()
 
-            if has_policy:
-                return self.best_move_from_policy(self.mcts.nodes[game.get_id()].policy())
-            else:
-                print("no policy, return random move")
-                return random.choice(game.legal_moves())
+            # mcts only: use montecarlo tree to select best move, instead of nn
+            # TODO: maybe mtc can also be used for learning
+            if mcts_only:
+                if has_policy:
+                    return self.best_move_from_policy(self.mcts.nodes[game.get_id()].policy())
+                else:
+                    print("no policy, return random move")
+                    return random.choice(game.legal_moves())
+
+            # train nn from expanded tree
+            self.nn_fit_training_examples()
 
         return self.predict_best_move(game)
 
