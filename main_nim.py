@@ -7,13 +7,17 @@ from nim import *
 from alpha_zero import *
 from alpha_nim import *
 
+
 if __name__ == '__main__':
     game = AlphaNim()
     alpha_zero = AlphaZero(game)
+    #
+    # move = alpha_zero.player(game)
+    #
+    # print(move)
 
-    move = alpha_zero.player(game)
-
-    print(move)
+    def alpha_nim_player(game):
+        return alpha_zero.player(game, prediction_only=False, mcts_only=True, rollout=True)
 
     game = None
 
@@ -23,7 +27,7 @@ if __name__ == '__main__':
 
 
     # Let op player 0 en 1 / maar WHITE = 1 en BLACK = 2! (zwart begint)
-    players = [random_player, alpha_zero.player]
+    players = [random_player, alpha_nim_player]
     # players = [alpha_zero.player, alpha_zero.player]
 
     start = time.time()
