@@ -60,6 +60,11 @@ class AlphaZero():
 
         return self.best_move_from_policy(policy)
 
+    def predict_v(self, game):
+        _, v = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+
+        return v
+
     # perform training iterations to fill the tree
     def mcts_training(self, game=None):
         if game is None:
