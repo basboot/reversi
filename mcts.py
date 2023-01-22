@@ -149,7 +149,8 @@ class MCTS():
 
         return value
 
-    def simulate_game(self, current_node=None):
+    # if predict_v_function is specified it will be used, else a random rollout will be performed to find v
+    def simulate_game(self, current_node=None, predict_v_function=None):
         if current_node is None:
             current_node = self.root
 
@@ -172,7 +173,17 @@ class MCTS():
 
         # rollout rest of the game to find a value
         game = leaf.game
-        value = self.rollout(game) # value for current player
+
+        # use prediction function if one is specified, or do a random rollout
+        # not in paper: when gamestate is terminal also do a 'rollout' to help
+        # the nn learn the winning and losing states
+        if predict_v_function is None or len(game.legal_moves()) == 0:
+            value = self.rollout(game) # value for current player
+        else:
+            value = predict_v_function(game)
+            # TODO: sign must be adjusted for root player (see below) to match update
+            if game.current_player == self.root.game.current_player:
+                value *= -1
 
         # backpropagate value
         for breadcrumb in breadcrumbs:

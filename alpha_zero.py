@@ -74,13 +74,13 @@ class AlphaZero():
             print("Gamestate not in MCTS, create new MCTS with this gamestate as root")
             self.mcts = MCTS(game)
 
-        N_SIMULATIONS = 100000
+        N_SIMULATIONS = 1000000
         for n in range(N_SIMULATIONS):
             self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
 
     def mcts_extract_training_examples(self):
-        N_SAMPLES = 1000
-        N_VALIDATION = 100
+        N_SAMPLES = 100000
+        N_VALIDATION = 1000
 
         # arrays with numpy objects in correct shape
         x, y_p, y_v = self.mcts.create_training_samples(N_SAMPLES)
@@ -102,7 +102,7 @@ class AlphaZero():
         x_train, y_train, x_validation, y_validation = self.mcts_extract_training_examples()
         self.nn.fit(x_train, y_train, epochs=10, validation_data = (x_validation,y_validation))
 
-    def player(self, game, prediction_only=False, mcts_only=False):
+    def player(self, game, prediction_only=False, mcts_only=False, rollout=True):
 
         # prediction only = play without learning
         if not prediction_only:
@@ -116,7 +116,8 @@ class AlphaZero():
 
             N_SIMULATIONS = 100
             for n in range(N_SIMULATIONS):
-                self.mcts.simulate_game(self.mcts.nodes[game.get_id()])
+                self.mcts.simulate_game(self.mcts.nodes[game.get_id()],
+                                        predict_v_function=None if rollout else self.predict_v)
 
             has_policy = self.mcts.nodes[game.get_id()].has_policy()
 
@@ -148,6 +149,6 @@ if __name__ == '__main__':
 
     move = alpha_zero.player(game)
 
-    print(alpha_zero.predict_best_move())
+    print(alpha_zero.predict_best_move(game))
 
     print(move)
