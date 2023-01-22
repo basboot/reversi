@@ -53,7 +53,8 @@ class AlphaZero():
     def predict_best_move(self, game):
         # create policy from prediction and legal actions
         legal_actions = game.legal_moves()
-        p, _ = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+        # p, _ = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+        p, _ = self.nn(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), training=False)
 
         # one sample, one prediction
         policy = self.alpha_game.p_to_policy(p[0], legal_actions)
@@ -61,7 +62,11 @@ class AlphaZero():
         return self.best_move_from_policy(policy)
 
     def predict_v(self, game):
-        _, v = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+        #_, v = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+
+        # Use model without predict for faster prediction on small datasets
+        # https://stackoverflow.com/questions/60837962/confusion-about-keras-model-call-vs-call-vs-predict-methods
+        _, v = self.nn(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), training=False)
 
         return v
 
