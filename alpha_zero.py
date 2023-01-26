@@ -28,7 +28,7 @@ class AlphaZero():
 
     def load_nn_values(self):
         # load model weights from disk, if exists
-        filename = MODEL_PATH + self.alpha_game.network_name()
+        filename = MODEL_PATH + self.alpha_game.network_name
         print("LOAD: ", filename)
         # sometimes keras replaces .h5 with multiple data files and a .index
         # TODO: check if extension .tf is correct
@@ -37,7 +37,7 @@ class AlphaZero():
             self.nn.load_weights(filename)
 
     def save_nn_values(self):
-        filename = MODEL_PATH + self.alpha_game.network_name()
+        filename = MODEL_PATH + self.alpha_game.network_name
         # Use tf format to also save optimizer state
         #  https://stackoverflow.com/questions/42666046/loading-a-trained-keras-model-and-continue-training
         self.nn.save_weights(filename, save_format='tf')

@@ -33,8 +33,10 @@ class AlphaNim(nim.Nim):
         # policy only
         self.output_dimension = OUTPUT_DIMENSION
 
-    def network_name(self):
-        return "alpha_nim_test"
+        self.network_name = "alpha_nim_test"
+
+    def set_network_name(self, name):
+        self.network_name = name
 
     # override to also update the full gamestate for alpha
     def perform_move(self, move):
