@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+from keras import activations
 
 import nim
 from nim import Nim
@@ -50,13 +51,24 @@ class AlphaNim(nim.Nim):
         inputs = tf.keras.layers.Input(
             shape=INPUT_DIMENSION)
 
+        # input
         t = inputs
-
         t = tf.keras.layers.Flatten()(t)
-        outputPolicy = tf.keras.layers.Dense(BOARD_SIZE * BOARD_SIZE, kernel_initializer='random_normal',
-                                  bias_initializer='zeros')(t)
-        outputValue = tf.keras.layers.Dense(VALUE_SIZE, kernel_initializer='random_normal',
-                                  bias_initializer='zeros')(t)
+
+        initializer = tf.keras.initializers.RandomNormal(mean=0., stddev=1., seed=1)
+
+        # hidden
+        t = tf.keras.layers.Dense(16, kernel_initializer=initializer,
+                                             bias_initializer='zeros', activation=activations.relu)(t)
+        t = tf.keras.layers.Dense(32, kernel_initializer=initializer,
+                                  bias_initializer='zeros', activation=activations.relu)(t)
+
+        
+        # output
+        outputPolicy = tf.keras.layers.Dense(BOARD_SIZE * BOARD_SIZE, kernel_initializer=initializer,
+                                  bias_initializer='zeros', activation=activations.sigmoid)(t)
+        outputValue = tf.keras.layers.Dense(VALUE_SIZE, kernel_initializer=initializer,
+                                  bias_initializer='zeros', activation=activations.tanh)(t)
 
         model = tf.keras.models.Model(inputs, [outputPolicy, outputValue])
 
