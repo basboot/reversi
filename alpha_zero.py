@@ -10,16 +10,24 @@ MODEL_PATH = "./models/"
 N_SAMPLES = 100000
 N_VALIDATION = 1000
 N_SIMULATIONS = 1000000
+N_GAMES = 100
 
 class AlphaZero():
     def __init__(self, alpha_game, load_nn=True):
         self.alpha_game = alpha_game
         self.mcts = MCTS(self.alpha_game)
 
+        # learning network, update
         self.nn = alpha_game.create_nn()
+        # copy, to keep current best
+        # TODO: rename/refactor when ready (other network should be named target, or maybe even another name)
+        self.nn_target = alpha_game.create_nn()
 
         if load_nn:
             self.load_nn_values()
+
+        # copy network
+        self.nn_target.set_weights(self.nn.get_weights())
 
     # TODO
     # - cleanup policy and normalize (alphazero)
@@ -54,11 +62,14 @@ class AlphaZero():
                 best_move = p_action[1]
         return best_move  # None if there is no move
 
-    def predict_best_move(self, game):
+    def predict_best_move(self, game, nn=None):
+        if nn is None:
+            nn = self.nn
+
         # create policy from prediction and legal actions
         legal_actions = game.legal_moves()
         # p, _ = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
-        p, v = self.nn(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), training=False)
+        p, v = nn(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), training=False)
 
         print("p = ", p)
         print("v = ", v)
@@ -113,7 +124,43 @@ class AlphaZero():
         x_train, y_train, x_validation, y_validation = self.mcts_extract_training_examples(n_samples, n_validation)
         self.nn.fit(x_train, y_train, epochs=10, validation_data = (x_validation,y_validation))
 
-    def player(self, game, prediction_only=False, mcts_only=False, rollout=True, always_renew_mcts=True):
+    def nn_compete(self, n_games=N_GAMES):
+        # compete normal and target n games, winner survives
+
+        players = [self.nn, self.nn_target]
+        points = [0, 0]
+
+        for i in range(n_games):
+            game = AlphaNim()
+            # select player that plays with BLACK (= starting player)
+            first_player = random.randint(0, 1)
+
+
+            while True:
+                moves = game.legal_moves()
+                if len(moves) == 0:
+                    # game over
+                    break
+
+                current_player = (game.current_player + first_player) % 2
+                move = self.predict_best_move(game, players[current_player])
+                game = game.perform_move(move)
+
+            winning_player, _, _ = game.winning_player()
+            # don't need to count ties
+
+            if winning_player > 0:
+                points[(winning_player + first_player) % 2] += 1
+
+        # copy winner
+        print("RESULT OF COMPETITION: ", points[0], "-", points[1])
+        if points[0] > points[1]:
+            self.nn_target.set_weights(self.nn.get_weights())
+        else:
+            self.nn.set_weights(self.nn_target.get_weights())
+
+
+    def player(self, game, prediction_only=False, mcts_only=False, rollout=True, always_renew_mcts=True, nn_compete=False):
 
         if always_renew_mcts:
             self.mcts = MCTS(game)
@@ -128,7 +175,7 @@ class AlphaZero():
 
             assert game.get_id() in self.mcts.nodes, "node not in mcts"
 
-            N_SIMULATIONS = 10000
+            N_SIMULATIONS = 1000
             for n in range(N_SIMULATIONS):
                 self.mcts.simulate_game(self.mcts.nodes[game.get_id()],
                                         predict_v_function=None if rollout else self.predict_v)
@@ -145,7 +192,11 @@ class AlphaZero():
                     return random.choice(game.legal_moves())
 
             # train nn from expanded tree
-            self.nn_fit_training_examples(n_samples=10000, n_validation=100)
+            self.nn_fit_training_examples(n_samples=1000, n_validation=100)
+
+        # compete nn after update to choose between new and old version
+        if nn_compete:
+            self.nn_compete()
 
         return self.predict_best_move(game)
 

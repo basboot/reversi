@@ -17,7 +17,7 @@ if __name__ == '__main__':
     # print(move)
 
     def alpha_nim_player(game):
-        return alpha_zero.player(game, prediction_only=False, mcts_only=True, rollout=True)
+        return alpha_zero.player(game, prediction_only=False, mcts_only=False, rollout=False, always_renew_mcts=True, nn_compete=True)
 
     game = None
 
@@ -29,49 +29,37 @@ if __name__ == '__main__':
     # Let op player 0 en 1 / maar WHITE = 1 en BLACK = 2! (zwart begint)
     players = [random_player, alpha_nim_player]
     # players = [alpha_zero.player, alpha_zero.player]
+    points = [0, 0]
 
     start = time.time()
-    for i in range(1000):
+    for i in range(10):
         game = AlphaNim()
 
         # select player that plays with BLACK (= starting player)
         first_player = random.randint(0, 1)
 
         while True:
+            print(".", end='')
             moves = game.legal_moves()
             if len(moves) == 0:
                 # game over
                 break
 
-            if first_player == 0:
-                if game.current_player == BLACK:
-                    move = players[0](game)
-                else:
-                    move = players[1](game)
-            else:
-                if game.current_player == BLACK:
-                    move = players[1](game)
-                else:
-                    move = players[0](game)
-
+            current_player = (game.current_player + first_player) % 2
+            move = players[current_player](game)
             game = game.perform_move(move)
 
-        result, _, _ = game.winning_player()
-        if result == 0:
+
+        winning_player, _, _ = game.winning_player()
+        if winning_player == 0:
             tie += 1
         else:
-            if result == BLACK:  # black wins => first player wins
-                if first_player == 0:
-                    player0 += 1
-                else:
-                    player1 += 1
-            else:
-                if first_player == 0:
-                    player1 += 1
-                else:
-                    player0 += 1
+            points[(winning_player + first_player) % 2] += 1
 
-    print("P0, P1, TIE", player0, player1, tie)
+        # save nn after each game
+        alpha_zero.save_nn_values()
+
+    print("P0 - P1", points[0], points[1])
 
     end = time.time()
     print("Time consumed in working: ", end - start)
