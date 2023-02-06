@@ -1,8 +1,10 @@
 import random
 
 import numpy as np
+from keras import activations
 
 import reversi
+from nn_helper_functions import relu_bn, residual_block
 from reversi import Reversi
 import tensorflow as tf
 
@@ -13,6 +15,9 @@ GAMESTATE_HISTORY_SIZE = 1
 PIECE_TYPE_LAYERS = 2
 PLAYER_TURN_LAYER = 1
 VALUE_SIZE = 1
+
+INPUT_DIMENSION = (BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER)
+OUTPUT_DIMENSION = (BOARD_SIZE, BOARD_SIZE)
 
 # wrapper class with functionality needed by AlphaZero for playing Reversi
 class AlphaReversi(Reversi):
@@ -25,12 +30,14 @@ class AlphaReversi(Reversi):
         else:
             self.full_gamestate = full_gamestate
 
-        self.input_dimension = (BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER)
+        self.input_dimension = INPUT_DIMENSION
         # policy only
-        self.output_dimension = (BOARD_SIZE * BOARD_SIZE,)
+        self.output_dimension = OUTPUT_DIMENSION
 
-    def network_name(self):
-        return "alpha_reversi_test"
+        self.network_name = "alpha_reversi_test"
+
+    def set_network_name(self, name):
+        self.network_name = name
 
     # override to also update the full gamestate for alpha
     def perform_move(self, new_disk_location):
@@ -39,21 +46,80 @@ class AlphaReversi(Reversi):
 
         return AlphaReversi(new_board, new_player, new_full_gamestate)
 
+    def new_game(self):
+        return AlphaReversi()
+
     @staticmethod
     def create_nn():
         # TODO: dummy network, need to select topology
 
         # use inputs from gamestate_stack
         inputs = tf.keras.layers.Input(
-            shape=(BOARD_SIZE, BOARD_SIZE, PIECE_TYPE_LAYERS * GAMESTATE_HISTORY_SIZE + PLAYER_TURN_LAYER))
+            shape=INPUT_DIMENSION)
 
         t = inputs
 
-        t = tf.keras.layers.Flatten()(t)
-        outputPolicy = tf.keras.layers.Dense(BOARD_SIZE * BOARD_SIZE, kernel_initializer='random_normal',
-                                  bias_initializer='zeros')(t)
-        outputValue = tf.keras.layers.Dense(VALUE_SIZE, kernel_initializer='random_normal',
-                                  bias_initializer='zeros')(t)
+
+        BLOCKS = [1]
+        FILTERS = [128]
+
+        # conv filter (pre-filter to connect to resnet)
+
+        t = tf.keras.layers.BatchNormalization()(t)
+
+        t = tf.keras.layers.Conv2D(kernel_size=3,
+                                   strides=1,
+                                   filters=FILTERS[0],
+                                   padding="same")(t)
+        t = relu_bn(t)
+
+        # residual network
+
+        num_blocks_list = BLOCKS
+        num_filters_list = FILTERS
+        for i in range(len(num_blocks_list)):
+            num_blocks = num_blocks_list[i]
+            for j in range(num_blocks):
+                # downsampling needed to match in and output channels of each resnet
+                t = residual_block(t, downsample=(j == 0 and i != 0), filters=num_filters_list[i])
+
+        # output
+
+        # value
+        # TODO: split tail of network
+
+        t = tf.keras.layers.BatchNormalization()(t)
+
+        t_pol = tf.keras.layers.Conv2D(kernel_size=1,
+                                   strides=1,
+                                   filters=32,
+
+                                   padding="same")(t)
+
+        t_pol = tf.keras.layers.Conv2D(kernel_size=1,
+                                       strides=1,
+                                       filters=1,
+                                       activation=activations.sigmoid,
+                                       padding="same")(t_pol)
+
+        t_val = tf.keras.layers.Conv2D(kernel_size=1,
+                                       strides=1,
+                                       filters=3,
+                                       activation=activations.relu,
+                                       padding="same")(t)
+
+
+        initializer = tf.keras.initializers.RandomNormal(mean=0., stddev=1., seed=1)
+
+        # TODO: do we need to flatten?
+        # TODO: different paths for p and v: https://towardsdatascience.com/from-scratch-implementation-of-alphazero-for-connect4-f73d4554002a
+        t_val = tf.keras.layers.Flatten()(t_val)
+
+        # output
+        outputPolicy = t_pol
+        outputValue = tf.keras.layers.Dense(VALUE_SIZE, kernel_initializer=initializer,
+                                  bias_initializer='zeros', activation=activations.tanh)(t_val)
+
 
         model = tf.keras.models.Model(inputs, [outputPolicy, outputValue])
 
@@ -72,7 +138,7 @@ class AlphaReversi(Reversi):
         policy = []
         sum_priors = 0
         for action in legal_actions:
-            prior = p[BOARD_SIZE * action[0] + action[1]]
+            prior = p[action[0], action[1]]
             sum_priors += prior
             policy.append([prior, action])
 
@@ -85,9 +151,9 @@ class AlphaReversi(Reversi):
 
     @staticmethod
     def policy_to_p(policy):
-        p = np.zeros(BOARD_SIZE * BOARD_SIZE)
+        p = np.zeros((BOARD_SIZE, BOARD_SIZE))
         for p_action in policy:
-            p[BOARD_SIZE * p_action[1][0] + p_action[1][1]] = p_action[0]
+            p[p_action[1][0], p_action[1][1]] = p_action[0]
 
         return p
 
