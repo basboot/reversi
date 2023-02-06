@@ -10,7 +10,9 @@ MODEL_PATH = "./models/"
 N_SAMPLES = 100000
 N_VALIDATION = 1000
 N_SIMULATIONS = 1000000
-N_GAMES = 100
+N_GAMES = 200
+
+DEBUG = False
 
 class AlphaZero():
     def __init__(self, alpha_game, load_nn=True):
@@ -69,14 +71,17 @@ class AlphaZero():
         # create policy from prediction and legal actions
         legal_actions = game.legal_moves()
         # p, _ = self.nn.predict(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), verbose=0)
+        #print("***", game.full_gamestate.shape)
         p, v = nn(tf.reshape(game.full_gamestate, (1,) + self.alpha_game.input_dimension), training=False)
 
-        print("p = ", p)
-        print("v = ", v)
+        if DEBUG:
+            print("p = ", p)
+            print("v = ", v)
         # one sample, one prediction
         policy = self.alpha_game.p_to_policy(p[0], legal_actions)
 
-        print("p_clean = ", policy)
+        if DEBUG:
+            print("p_clean = ", policy)
 
         return self.best_move_from_policy(policy)
 
@@ -122,18 +127,24 @@ class AlphaZero():
 
     def nn_fit_training_examples(self, n_samples=N_SAMPLES, n_validation=N_VALIDATION):
         x_train, y_train, x_validation, y_validation = self.mcts_extract_training_examples(n_samples, n_validation)
-        self.nn.fit(x_train, y_train, epochs=10, validation_data = (x_validation,y_validation))
+        self.nn.fit(x_train, y_train, epochs=10, validation_data = (x_validation,y_validation), verbose=DEBUG)
 
-    def nn_compete(self, n_games=N_GAMES):
+        # single gradient decent, not sure if this is better
+        #self.nn.train_on_batch(x_train, y_train, reset_metrics=False)
+
+
+    def nn_compete(self, n_games=N_GAMES, random_first_move=True):
         # compete normal and target n games, winner survives
 
         players = [self.nn, self.nn_target]
         points = [0, 0]
 
         for i in range(n_games):
-            game = AlphaNim()
+            game = self.alpha_game.new_game()
             # select player that plays with BLACK (= starting player)
             first_player = random.randint(0, 1)
+
+            first_move = True
 
 
             while True:
@@ -143,8 +154,15 @@ class AlphaZero():
                     break
 
                 current_player = (game.current_player + first_player) % 2
-                move = self.predict_best_move(game, players[current_player])
+
+                # Force random move for first player to get some randomness in the game
+                if first_move and random_first_move:
+                    move = random.choice(moves)
+                else:
+                    move = self.predict_best_move(game, players[current_player])
                 game = game.perform_move(move)
+
+                first_move = False
 
             winning_player, _, _ = game.winning_player()
             # don't need to count ties
@@ -153,14 +171,18 @@ class AlphaZero():
                 points[(winning_player + first_player) % 2] += 1
 
         # copy winner
-        print("RESULT OF COMPETITION: ", points[0], "-", points[1])
+        print("RESULT OF COMPETITION: ", points[0], "-", points[1], end='')
         if points[0] > points[1]:
             self.nn_target.set_weights(self.nn.get_weights())
+            print("> new network wins")
         else:
             self.nn.set_weights(self.nn_target.get_weights())
+            print("< keep old network")
 
 
-    def player(self, game, prediction_only=False, mcts_only=False, rollout=True, always_renew_mcts=True, nn_compete=False):
+    def player(self, game, prediction_only=False, mcts_only=False, rollout=True,
+               always_renew_mcts=True, nn_compete=False, n_games=N_GAMES, n_simulations=N_SIMULATIONS,
+               n_samples=1000, n_validation=100):
 
         if always_renew_mcts:
             self.mcts = MCTS(game)
@@ -175,8 +197,7 @@ class AlphaZero():
 
             assert game.get_id() in self.mcts.nodes, "node not in mcts"
 
-            N_SIMULATIONS = 1000
-            for n in range(N_SIMULATIONS):
+            for n in range(n_simulations):
                 self.mcts.simulate_game(self.mcts.nodes[game.get_id()],
                                         predict_v_function=None if rollout else self.predict_v)
 
@@ -192,11 +213,11 @@ class AlphaZero():
                     return random.choice(game.legal_moves())
 
             # train nn from expanded tree
-            self.nn_fit_training_examples(n_samples=1000, n_validation=100)
+            self.nn_fit_training_examples(n_samples=n_samples, n_validation=n_validation)
 
         # compete nn after update to choose between new and old version
-        if nn_compete:
-            self.nn_compete()
+        if nn_compete and not prediction_only:
+            self.nn_compete(n_games=n_games)
 
         return self.predict_best_move(game)
 
