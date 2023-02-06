@@ -33,7 +33,7 @@ class AlphaNim(nim.Nim):
         # policy only
         self.output_dimension = OUTPUT_DIMENSION
 
-        self.network_name = "alpha_nim_test"
+        self.network_name = "alpha_nim_tail_16_8"
 
     def set_network_name(self, name):
         self.network_name = name
@@ -44,6 +44,9 @@ class AlphaNim(nim.Nim):
         new_full_gamestate = self.push_move_to_gamestate(self.full_gamestate, new_board, new_player)
 
         return AlphaNim(new_board, new_player, new_full_gamestate)
+
+    def new_game(self):
+        return AlphaNim()
 
     @staticmethod
     def create_nn():
@@ -65,12 +68,17 @@ class AlphaNim(nim.Nim):
         t = tf.keras.layers.Dense(32, kernel_initializer=initializer,
                                   bias_initializer='zeros', activation=activations.relu)(t)
 
+        t_pol = tf.keras.layers.Dense(16, kernel_initializer=initializer,
+                                  bias_initializer='zeros', activation=activations.relu)(t)
+
+        t_val = tf.keras.layers.Dense(8, kernel_initializer=initializer,
+                                  bias_initializer='zeros', activation=activations.relu)(t)
         
         # output
         outputPolicy = tf.keras.layers.Dense(BOARD_SIZE * BOARD_SIZE, kernel_initializer=initializer,
-                                  bias_initializer='zeros', activation=activations.sigmoid)(t)
+                                  bias_initializer='zeros', activation=activations.sigmoid)(t_pol)
         outputValue = tf.keras.layers.Dense(VALUE_SIZE, kernel_initializer=initializer,
-                                  bias_initializer='zeros', activation=activations.tanh)(t)
+                                  bias_initializer='zeros', activation=activations.tanh)(t_val)
 
         model = tf.keras.models.Model(inputs, [outputPolicy, outputValue])
 
