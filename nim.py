@@ -103,9 +103,10 @@ if __name__ == '__main__':
 
     # [4199, 5411, 390]
 
-    game = Nim()
+    game = Nim([1, 2, 2, 0], BLACK) #Nim([1, 2, 2, 4], BLACK)
+
     mcts = MCTS(game)
-    N_SIMULATIONS = 1000000
+    N_SIMULATIONS = 10000
     for n in range(N_SIMULATIONS):
         mcts.simulate_game(mcts.nodes[game.get_id()])
 
@@ -114,9 +115,13 @@ if __name__ == '__main__':
     policy = mcts.nodes[game.get_id()].policy()
 
     print(policy)
+
+    print("MCTS simulation")
+    print(game)
     p_total = 0
     for move in policy:
         p_total += move[0]
         print("p_win = ",move[0],": take", move[1][1], "from heap", (move[1][0]+1))
 
     print(p_total)
+

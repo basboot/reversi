@@ -60,7 +60,7 @@ class AlphaReversi(Reversi):
         t = inputs
 
 
-        BLOCKS = [1]
+        BLOCKS = [19]
         FILTERS = [128]
 
         # conv filter (pre-filter to connect to resnet)
